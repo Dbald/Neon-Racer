@@ -131,6 +131,13 @@
     filter: drop-shadow(0 0 10px #ff00ff66);
   }
 
+  .game-over-level {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    margin-bottom: 20px;
+  }
+
   .game-over-high {
     font-size: 11px;
     color: #00ffffaa;
@@ -177,7 +184,14 @@
     filter: drop-shadow(0 0 6px #ff00ff44);
   }
 
+  .hud-item.center { text-align: center; }
   .hud-item.right { text-align: right; }
+
+  .level-name {
+    font-size: 13px;
+    letter-spacing: 3px;
+    transition: color 0.3s;
+  }
 
   #pauseOverlay {
     position: absolute;
@@ -224,6 +238,9 @@
     <div class="hud-item">
       SCORE<br><span class="val" id="hudScore">0</span>
     </div>
+    <div class="hud-item center">
+      <span class="val level-name" id="hudLevel">ROOKIE</span>
+    </div>
     <div class="hud-item right">
       BEST<br><span class="val" id="hudHigh">0</span>
     </div>
@@ -241,6 +258,7 @@
   <div id="gameOverScreen" class="screen-overlay hidden">
     <div class="game-over-score">FINAL SCORE</div>
     <div class="game-over-value" id="finalScore">0</div>
+    <div class="game-over-level" id="finalLevel">ROOKIE</div>
     <div class="new-best hidden" id="newBestLabel">NEW BEST!</div>
     <div class="game-over-high" id="finalHigh">BEST: 0</div>
     <button class="btn" id="restartBtn">RETRY</button>
@@ -304,7 +322,12 @@ const AudioSys = (() => {
     nearMiss() { play(1200, 'sine', 0.12, 0.12); play(1800, 'sine', 0.08, 0.08); },
     crash() { noise(0.4, 0.2); play(200, 'sawtooth', 0.3, 0.15, 40); },
     uiClick() { play(800, 'square', 0.05, 0.06); },
-    scoreUp() { play(1000, 'sine', 0.06, 0.06); play(1500, 'sine', 0.06, 0.04); }
+    scoreUp() { play(1000, 'sine', 0.06, 0.06); play(1500, 'sine', 0.06, 0.04); },
+    levelUp() {
+      play(600, 'sine', 0.15, 0.12);
+      setTimeout(() => play(800, 'sine', 0.15, 0.12), 80);
+      setTimeout(() => play(1200, 'sine', 0.2, 0.15), 160);
+    }
   };
 })();
 
@@ -328,11 +351,25 @@ let highScore = parseInt(localStorage.getItem('neonRacerHigh')) || 0;
 let distanceTraveled = 0;
 let nearMissCount = 0;
 let difficultyMultiplier = 1;
-let baseSpeed = 4;
-let currentSpeed = 4;
+let baseSpeed = 2.5;
+let currentSpeed = 2.5;
 let spawnTimer = 0;
-let spawnInterval = 60;
+let spawnInterval = 80;
 let frameCount = 0;
+let currentLevel = 0;
+let levelUpTimer = 0; // frames remaining to show level-up banner
+
+// Milestone definitions: each level sets the difficulty ceiling until the next
+const MILESTONES = [
+  { score: 0,    name: 'ROOKIE',        speed: 2.5, spawnInterval: 80, maxLanes: 1, color: '#00ffcc' },
+  { score: 30,   name: 'STREET RACER',  speed: 3.2, spawnInterval: 68, maxLanes: 1, color: '#00ccff' },
+  { score: 80,   name: 'CIRCUIT PRO',   speed: 4.0, spawnInterval: 58, maxLanes: 2, color: '#cc66ff' },
+  { score: 160,  name: 'SPEED DEMON',   speed: 5.0, spawnInterval: 48, maxLanes: 2, color: '#ff9900' },
+  { score: 300,  name: 'NEON GHOST',    speed: 6.0, spawnInterval: 40, maxLanes: 3, color: '#ff0066' },
+  { score: 500,  name: 'HIGHWAY FURY',  speed: 7.2, spawnInterval: 34, maxLanes: 3, color: '#ff00ff' },
+  { score: 750,  name: 'LIGHT SPEED',   speed: 8.5, spawnInterval: 28, maxLanes: 4, color: '#ffff00' },
+  { score: 1100, name: 'OVERDRIVE',     speed: 10,  spawnInterval: 24, maxLanes: 4, color: '#ff3333' },
+];
 
 // Screen shake
 let shakeAmount = 0;
@@ -388,11 +425,13 @@ function resetGame() {
   distanceTraveled = 0;
   nearMissCount = 0;
   difficultyMultiplier = 1;
-  baseSpeed = 4;
-  currentSpeed = 4;
+  baseSpeed = 2.5;
+  currentSpeed = 2.5;
   spawnTimer = 0;
-  spawnInterval = 55;
+  spawnInterval = 80;
   frameCount = 0;
+  currentLevel = 0;
+  levelUpTimer = 0;
   shakeAmount = 0;
   shakeDuration = 0;
   traffic = [];
@@ -468,6 +507,7 @@ const gameOverScreen = document.getElementById('gameOverScreen');
 const hud = document.getElementById('hud');
 const hudScore = document.getElementById('hudScore');
 const hudHigh = document.getElementById('hudHigh');
+const hudLevel = document.getElementById('hudLevel');
 const finalScore = document.getElementById('finalScore');
 const finalHigh = document.getElementById('finalHigh');
 const newBestLabel = document.getElementById('newBestLabel');
@@ -511,6 +551,9 @@ function showGameOver() {
     saveHigh();
   }
   finalScore.textContent = Math.floor(score);
+  const finalLevelEl = document.getElementById('finalLevel');
+  finalLevelEl.textContent = MILESTONES[currentLevel].name;
+  finalLevelEl.style.color = MILESTONES[currentLevel].color;
   finalHigh.textContent = 'BEST: ' + highScore;
   newBestLabel.classList.toggle('hidden', !isNew);
   gameOverScreen.classList.remove('hidden');
@@ -528,7 +571,7 @@ function spawnTraffic() {
     [lanePool[i], lanePool[j]] = [lanePool[j], lanePool[i]];
   }
 
-  const maxSpawn = Math.min(Math.floor(difficultyMultiplier), LANE_COUNT - 1);
+  const maxSpawn = Math.min(MILESTONES[currentLevel].maxLanes, LANE_COUNT - 1);
   const count = Math.random() < 0.3 ? Math.min(2, maxSpawn) : 1;
 
   for (let i = 0; i < count; i++) {
@@ -779,13 +822,33 @@ function gameLoop(timestamp) {
 
   // ---- Update ----
 
-  // Difficulty ramp
-  if (frameCount % 300 === 0) {
-    difficultyMultiplier += 0.15;
-    baseSpeed += 0.3;
-    if (spawnInterval > 25) spawnInterval -= 2;
+  // Milestone-based difficulty progression
+  let newLevel = currentLevel;
+  for (let i = MILESTONES.length - 1; i >= 0; i--) {
+    if (score >= MILESTONES[i].score) { newLevel = i; break; }
   }
-  currentSpeed = baseSpeed + (difficultyMultiplier - 1) * 2;
+  if (newLevel > currentLevel) {
+    currentLevel = newLevel;
+    levelUpTimer = 180; // show banner for ~3 seconds
+    AudioSys.levelUp();
+    spawnParticles(W / 2, H / 2, 40, MILESTONES[currentLevel].color);
+  }
+
+  // Smooth interpolation toward current milestone's target values
+  const ms = MILESTONES[currentLevel];
+  const nextMs = MILESTONES[Math.min(currentLevel + 1, MILESTONES.length - 1)];
+  // Progress within current milestone (0-1)
+  const msProgress = currentLevel < MILESTONES.length - 1
+    ? Math.min((score - ms.score) / (nextMs.score - ms.score), 1)
+    : 1;
+  // Lerp between current and next milestone for smooth ramp
+  baseSpeed = ms.speed + (nextMs.speed - ms.speed) * msProgress * 0.5;
+  spawnInterval = ms.spawnInterval + (nextMs.spawnInterval - ms.spawnInterval) * msProgress * 0.5;
+  difficultyMultiplier = 1 + currentLevel * 0.3 + msProgress * 0.15;
+  currentSpeed = baseSpeed;
+
+  // Level-up banner timer
+  if (levelUpTimer > 0) levelUpTimer -= dt;
 
   // Road scroll
   roadOffset = (roadOffset + currentSpeed * dt) % 60;
@@ -869,6 +932,8 @@ function gameLoop(timestamp) {
 
   // Update HUD
   hudScore.textContent = Math.floor(score);
+  hudLevel.textContent = MILESTONES[currentLevel].name;
+  hudLevel.style.color = MILESTONES[currentLevel].color;
   if (score > highScore) {
     hudHigh.textContent = Math.floor(score);
   }
@@ -933,6 +998,47 @@ function render() {
   // Effects
   drawParticles();
   drawPopups();
+
+  // Level-up banner
+  if (levelUpTimer > 0 && currentLevel > 0) {
+    const bannerAlpha = Math.min(levelUpTimer / 30, 1); // fade out last 0.5s
+    const ms = MILESTONES[currentLevel];
+    const pulse = 0.85 + 0.15 * Math.sin(frameCount * 0.15);
+
+    // Banner background
+    ctx.globalAlpha = bannerAlpha * 0.6;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, H / 2 - 50, W, 100);
+
+    // Border lines
+    ctx.globalAlpha = bannerAlpha * 0.8;
+    ctx.strokeStyle = ms.color;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = ms.color;
+    ctx.beginPath(); ctx.moveTo(0, H / 2 - 50); ctx.lineTo(W, H / 2 - 50); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, H / 2 + 50); ctx.lineTo(W, H / 2 + 50); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Level name
+    ctx.globalAlpha = bannerAlpha * pulse;
+    ctx.font = 'bold 28px Orbitron, monospace';
+    ctx.fillStyle = ms.color;
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = ms.color;
+    ctx.fillText(ms.name, W / 2, H / 2 + 4);
+
+    // "LEVEL UP" subtitle
+    ctx.font = '11px Orbitron, monospace';
+    ctx.fillStyle = '#ffffff88';
+    ctx.shadowBlur = 0;
+    ctx.fillText('LEVEL UP', W / 2, H / 2 + 28);
+
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'start';
+    ctx.shadowBlur = 0;
+  }
 
   // Scanline overlay
   ctx.fillStyle = 'rgba(0,0,0,0.03)';
