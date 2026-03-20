@@ -351,22 +351,29 @@ let highScore = parseInt(localStorage.getItem('neonRacerHigh')) || 0;
 let distanceTraveled = 0;
 let nearMissCount = 0;
 let difficultyMultiplier = 1;
-let baseSpeed = 3.0;
-let currentSpeed = 3.0;
+let baseSpeed = 4.2;
+let currentSpeed = 4.2;
 let spawnTimer = 0;
-let spawnInterval = 70;
+let spawnInterval = 60;
 let frameCount = 0;
 let currentLevel = 0;
 let levelUpTimer = 0; // frames remaining to show level-up banner
 
 // Milestone definitions: each level sets the difficulty ceiling until the next
 const MILESTONES = [
-  { score: 0,    name: 'ROOKIE',        speed: 3.0, spawnInterval: 70,  maxLanes: 2, color: '#00ffcc' },
-  { score: 60,   name: 'STREET RACER',  speed: 3.8, spawnInterval: 60,  maxLanes: 2, color: '#00ccff' },
-  { score: 150,  name: 'CIRCUIT PRO',   speed: 4.5, spawnInterval: 52,  maxLanes: 2, color: '#cc66ff' },
-  { score: 300,  name: 'SPEED DEMON',   speed: 5.5, spawnInterval: 45,  maxLanes: 3, color: '#ff9900' },
-  { score: 500,  name: 'NEON GHOST',    speed: 6.5, spawnInterval: 40,  maxLanes: 3, color: '#ff0066' },
-  { score: 800,  name: 'HIGHWAY FURY',  speed: 7.5, spawnInterval: 35,  maxLanes: 3, color: '#ff00ff' },
+  // Wave 1: Hot start — throws you right into the action
+  { score: 0,    name: 'ROOKIE',        speed: 4.2, spawnInterval: 60,  maxLanes: 2, color: '#00ffcc' },
+  // Breather — things ease up, you think you've got this
+  { score: 60,   name: 'STREET RACER',  speed: 3.0, spawnInterval: 85,  maxLanes: 2, color: '#00ccff' },
+  // Wave 2: Ramps back harder than before
+  { score: 150,  name: 'CIRCUIT PRO',   speed: 5.2, spawnInterval: 50,  maxLanes: 2, color: '#cc66ff' },
+  // Breather — slower but more lanes to watch
+  { score: 300,  name: 'SPEED DEMON',   speed: 3.8, spawnInterval: 68,  maxLanes: 3, color: '#ff9900' },
+  // Wave 3: Real heat
+  { score: 500,  name: 'NEON GHOST',    speed: 7.0, spawnInterval: 40,  maxLanes: 3, color: '#ff0066' },
+  // Breather — one last calm before the storm
+  { score: 800,  name: 'HIGHWAY FURY',  speed: 5.0, spawnInterval: 55,  maxLanes: 3, color: '#ff00ff' },
+  // Wave 4: No mercy
   { score: 1200, name: 'LIGHT SPEED',   speed: 9.0, spawnInterval: 30,  maxLanes: 3, color: '#ffff00' },
   { score: 1800, name: 'OVERDRIVE',     speed: 11,  spawnInterval: 25,  maxLanes: 4, color: '#ff3333' },
 ];
@@ -425,10 +432,10 @@ function resetGame() {
   distanceTraveled = 0;
   nearMissCount = 0;
   difficultyMultiplier = 1;
-  baseSpeed = 3.0;
-  currentSpeed = 3.0;
+  baseSpeed = 4.2;
+  currentSpeed = 4.2;
   spawnTimer = 0;
-  spawnInterval = 70;
+  spawnInterval = 60;
   frameCount = 0;
   currentLevel = 0;
   levelUpTimer = 0;
