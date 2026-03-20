@@ -354,7 +354,7 @@ let difficultyMultiplier = 1;
 let baseSpeed = 4.2;
 let currentSpeed = 4.2;
 let spawnTimer = 0;
-let spawnInterval = 60;
+let spawnInterval = 45;
 let frameCount = 0;
 let currentLevel = 0;
 let levelUpTimer = 0; // frames remaining to show level-up banner
@@ -362,7 +362,7 @@ let levelUpTimer = 0; // frames remaining to show level-up banner
 // Milestone definitions: each level sets the difficulty ceiling until the next
 const MILESTONES = [
   // Wave 1: Hot start — throws you right into the action
-  { score: 0,    name: 'ROOKIE',        speed: 4.2, spawnInterval: 60,  maxLanes: 2, color: '#00ffcc' },
+  { score: 0,    name: 'ROOKIE',        speed: 4.2, spawnInterval: 45,  maxLanes: 2, color: '#00ffcc' },
   // Breather — things ease up, you think you've got this
   { score: 60,   name: 'STREET RACER',  speed: 3.0, spawnInterval: 85,  maxLanes: 2, color: '#00ccff' },
   // Wave 2: Ramps back harder than before
@@ -445,6 +445,25 @@ function resetGame() {
   popups = [];
   particles = [];
   resetPlayer();
+
+  // Pre-spawn cars already on screen so action starts instantly
+  const preSpawnRows = [
+    { y: -20 },
+    { y: H * 0.25 },
+    { y: H * 0.55 },
+  ];
+  for (const row of preSpawnRows) {
+    const lane = Math.floor(Math.random() * LANE_COUNT);
+    const speedVar = (Math.random() - 0.5) * 1.5;
+    traffic.push({
+      lane,
+      x: laneX(lane),
+      y: row.y,
+      speed: currentSpeed * 0.4 + speedVar,
+      color: ['#ff0066', '#00ffcc', '#ff9900', '#cc66ff', '#00ccff'][Math.floor(Math.random() * 5)],
+      passed: row.y > player.y
+    });
+  }
 }
 
 function saveHigh() {
