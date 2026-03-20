@@ -586,22 +586,55 @@ function showGameOver() {
 }
 
 // ---- Traffic Spawning ----
-function spawnTraffic() {
-  // Pick 1-2 lanes to spawn in, ensuring at least one lane remains open
-  const lanePool = [];
-  for (let i = 0; i < LANE_COUNT; i++) lanePool.push(i);
+const MIN_GAP = TRAFFIC_H + PLAYER_H + 30; // vertical gap needed to squeeze through
 
-  // Shuffle
-  for (let i = lanePool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [lanePool[i], lanePool[j]] = [lanePool[j], lanePool[i]];
+function laneIsBlocked(lane) {
+  // Check if any existing car in this lane is too close to the spawn point (top of screen)
+  for (const car of traffic) {
+    if (car.lane === lane && car.y < MIN_GAP) return true;
+  }
+  return false;
+}
+
+function spawnTraffic() {
+  // Build list of lanes that are safe to spawn in (no car too close to top)
+  const safeLanes = [];
+  for (let i = 0; i < LANE_COUNT; i++) {
+    if (!laneIsBlocked(i)) safeLanes.push(i);
   }
 
+  // Always keep at least one lane open — find which lanes have the most clearance
   const maxSpawn = Math.min(MILESTONES[currentLevel].maxLanes, LANE_COUNT - 1);
-  const count = Math.random() < 0.3 ? Math.min(2, maxSpawn) : 1;
+  if (safeLanes.length <= 1) return; // not enough room, skip this spawn
+
+  // Shuffle safe lanes
+  for (let i = safeLanes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [safeLanes[i], safeLanes[j]] = [safeLanes[j], safeLanes[i]];
+  }
+
+  // Spawn 1-2 cars but always leave at least one safe lane completely open
+  const maxCanSpawn = Math.min(maxSpawn, safeLanes.length - 1);
+  if (maxCanSpawn <= 0) return;
+  const count = Math.random() < 0.3 ? Math.min(2, maxCanSpawn) : 1;
+
+  // Verify the lanes we DON'T spawn in have a passable gap
+  // Check that at least one lane remains clear all the way down
+  const spawnSet = new Set(safeLanes.slice(0, count));
+  let hasOpenPath = false;
+  for (let i = 0; i < LANE_COUNT; i++) {
+    if (spawnSet.has(i)) continue;
+    // Check this lane is clear enough to drive through
+    let blocked = false;
+    for (const car of traffic) {
+      if (car.lane === i && car.y < MIN_GAP) { blocked = true; break; }
+    }
+    if (!blocked) { hasOpenPath = true; break; }
+  }
+  if (!hasOpenPath) return; // would create a wall, skip
 
   for (let i = 0; i < count; i++) {
-    const lane = lanePool[i];
+    const lane = safeLanes[i];
     const speedVar = (Math.random() - 0.5) * 1.5;
     traffic.push({
       lane,
