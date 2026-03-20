@@ -354,21 +354,21 @@ let difficultyMultiplier = 1;
 let baseSpeed = 2.5;
 let currentSpeed = 2.5;
 let spawnTimer = 0;
-let spawnInterval = 80;
+let spawnInterval = 180;
 let frameCount = 0;
 let currentLevel = 0;
 let levelUpTimer = 0; // frames remaining to show level-up banner
 
 // Milestone definitions: each level sets the difficulty ceiling until the next
 const MILESTONES = [
-  { score: 0,    name: 'ROOKIE',        speed: 2.5, spawnInterval: 80, maxLanes: 1, color: '#00ffcc' },
-  { score: 30,   name: 'STREET RACER',  speed: 3.2, spawnInterval: 68, maxLanes: 1, color: '#00ccff' },
-  { score: 80,   name: 'CIRCUIT PRO',   speed: 4.0, spawnInterval: 58, maxLanes: 2, color: '#cc66ff' },
-  { score: 160,  name: 'SPEED DEMON',   speed: 5.0, spawnInterval: 48, maxLanes: 2, color: '#ff9900' },
-  { score: 300,  name: 'NEON GHOST',    speed: 6.0, spawnInterval: 40, maxLanes: 3, color: '#ff0066' },
-  { score: 500,  name: 'HIGHWAY FURY',  speed: 7.2, spawnInterval: 34, maxLanes: 3, color: '#ff00ff' },
-  { score: 750,  name: 'LIGHT SPEED',   speed: 8.5, spawnInterval: 28, maxLanes: 4, color: '#ffff00' },
-  { score: 1100, name: 'OVERDRIVE',     speed: 10,  spawnInterval: 24, maxLanes: 4, color: '#ff3333' },
+  { score: 0,    name: 'ROOKIE',        speed: 2.5, spawnInterval: 180, maxLanes: 1, color: '#00ffcc' },
+  { score: 30,   name: 'STREET RACER',  speed: 3.2, spawnInterval: 150, maxLanes: 1, color: '#00ccff' },
+  { score: 80,   name: 'CIRCUIT PRO',   speed: 4.0, spawnInterval: 120, maxLanes: 2, color: '#cc66ff' },
+  { score: 160,  name: 'SPEED DEMON',   speed: 5.0, spawnInterval: 100, maxLanes: 2, color: '#ff9900' },
+  { score: 300,  name: 'NEON GHOST',    speed: 6.0, spawnInterval: 85,  maxLanes: 2, color: '#ff0066' },
+  { score: 500,  name: 'HIGHWAY FURY',  speed: 7.2, spawnInterval: 70,  maxLanes: 3, color: '#ff00ff' },
+  { score: 750,  name: 'LIGHT SPEED',   speed: 8.5, spawnInterval: 58,  maxLanes: 3, color: '#ffff00' },
+  { score: 1100, name: 'OVERDRIVE',     speed: 10,  spawnInterval: 48,  maxLanes: 4, color: '#ff3333' },
 ];
 
 // Screen shake
@@ -428,7 +428,7 @@ function resetGame() {
   baseSpeed = 2.5;
   currentSpeed = 2.5;
   spawnTimer = 0;
-  spawnInterval = 80;
+  spawnInterval = 180;
   frameCount = 0;
   currentLevel = 0;
   levelUpTimer = 0;
@@ -874,7 +874,7 @@ function gameLoop(timestamp) {
 
   // Spawn traffic
   spawnTimer += dt;
-  if (spawnTimer >= spawnInterval / currentSpeed) {
+  if (spawnTimer >= spawnInterval) {
     spawnTraffic();
     spawnTimer = 0;
   }
